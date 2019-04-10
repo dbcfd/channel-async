@@ -28,15 +28,14 @@ impl<T> Receiver<T> {
         }
     }
 
+    #[allow(dead_code)]
     fn try_clone(&self) -> Result<Receiver<T>, Error> {
         if let ReceiveState::Ready(ref r) = self.inner {
-            Ok(Receiver::new(r, self.delay))
+            Ok(Receiver::new(r.clone(), self.delay))
         } else {
             Err(Error::Clone)
         }
     }
-
-    fn delay(&self) -> Duration { self.delay }
 
     fn inner<'a>(self: Pin<&'a mut Self>) -> &'a mut ReceiveState<T> {
         unsafe {
@@ -90,5 +89,17 @@ impl<T: Send + 'static> Stream for Receiver<T> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    #[test]
+    fn clone() {
+        let (_, r) = crate::unbounded::<i32>(Duration::from_millis(100));
+
+        r.try_clone().expect("Could not clone a fresh receiver");
     }
 }
