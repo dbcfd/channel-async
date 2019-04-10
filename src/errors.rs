@@ -8,6 +8,8 @@ pub enum Error {
     Disconnected,
     #[fail(display = "Tokio timer error")]
     TokioTimer(#[fail(cause)] tokio_timer::Error),
+    #[fail(display = "Receiver was not in a state to clone")]
+    Clone,
 }
 
 unsafe impl Sync for Error {}

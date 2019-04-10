@@ -42,3 +42,9 @@ impl<T> Sender<T> {
         self.inner.len()
     }
 }
+
+impl<T> Clone for Sender<T> {
+    fn clone(&self) -> Self {
+        Sender::new(self.inner.clone(), self.delay)
+    }
+}

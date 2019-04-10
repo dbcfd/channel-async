@@ -28,6 +28,14 @@ impl<T> Receiver<T> {
         }
     }
 
+    fn try_clone(&self) -> Result<Receiver<T>, Error> {
+        if let ReceiveState::Ready(ref r) = self.inner {
+            Ok(Receiver::new(r, self.delay))
+        } else {
+            Err(Error::Clone)
+        }
+    }
+
     fn delay(&self) -> Duration { self.delay }
 
     fn inner<'a>(self: Pin<&'a mut Self>) -> &'a mut ReceiveState<T> {
