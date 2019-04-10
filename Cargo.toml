@@ -1,0 +1,39 @@
+[package]
+name = "channel-async"
+edition = "2018"
+
+# When releasing to crates.io:
+# - Update html_root_url.
+# - Update CHANGELOG.md.
+# - Update doc URL.
+# - Create "v0.1.x" git tag.
+version = "0.3.0-alpha.1"
+license = "MIT"
+readme = "README.md"
+description = """
+Async/Stream Extensions for crossbeam-channel
+"""
+authors = ["Danny Browning <bdbrowning2@gmail.com>"]
+categories = ["asynchronous", "network-programming"]
+documentation = "https://docs.rs/channel-async/0.3.0-alpha.1/channel_async/"
+repository = "https://github.com/dbcfd/channel-async"
+
+[dependencies]
+crossbeam-channel = "0.3"
+failure = "0.1"
+failure_derive = "0.1"
+tokio-timer = "0.2"
+
+[dependencies.futures]
+version = "0.3.0-alpha.13"
+package = "futures-preview"
+features = ["compat"]
+
+[dev-dependencies]
+criterion = "0.2"
+tokio = "0.1"
+
+[[bench]]
+path = "benches/bench.rs"
+name = "benchmark"
+harness = false
