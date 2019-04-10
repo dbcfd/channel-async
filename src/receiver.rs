@@ -29,7 +29,7 @@ impl<T> Receiver<T> {
     }
 
     #[allow(dead_code)]
-    fn try_clone(&self) -> Result<Receiver<T>, Error> {
+    pub fn try_clone(&self) -> Result<Receiver<T>, Error> {
         if let ReceiveState::Ready(ref r) = self.inner {
             Ok(Receiver::new(r.clone(), self.delay))
         } else {
