@@ -4,7 +4,7 @@ use futures::compat::Future01CompatExt;
 use futures::{FutureExt, Stream};
 use std::future::Future;
 use std::pin::Pin;
-use std::task::{Poll, Waker};
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 type Outstanding<T> = Pin<Box<Future<Output=Result<(Option<T>, crossbeam_channel::Receiver<T>), Error>> + Send>>;
@@ -61,7 +61,7 @@ impl<T: Send + 'static> Stream for Receiver<T> {
 
     fn poll_next(
         mut self: Pin<&mut Self>,
-        waker: &Waker,
+        waker: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         loop {
             let inner = std::mem::replace(self.as_mut().inner(), ReceiveState::None);
