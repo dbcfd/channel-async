@@ -1,7 +1,7 @@
 //! #channel-async
 //!
 //! Async/stream extensions for crossbeam-channel
-#![feature(futures_api, async_await, await_macro)]
+#![feature(async_await, await_macro)]
 mod errors;
 mod receiver;
 mod sender;
