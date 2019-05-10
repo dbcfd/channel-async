@@ -1,7 +1,7 @@
 //! #channel-async
 //!
 //! Async/stream extensions for crossbeam-channel
-#![feature(async_await, await_macro)]
+#![feature(async_await)]
 mod errors;
 mod receiver;
 mod sender;
@@ -41,7 +41,7 @@ mod tests {
 
         let send_fut = async move {
             for i in 0..100usize {
-                await!(tx.send(i)).expect("Failed to send");
+                tx.send(i).await.expect("Failed to send");
             }
         };
 
@@ -50,7 +50,7 @@ mod tests {
                 agg.push(x);
                 futures::future::ready(Ok(agg))
             });
-            await!(f)
+            f.await
         };
 
         rt.spawn(send_fut.unit_error().boxed().compat());

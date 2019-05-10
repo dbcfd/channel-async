@@ -49,7 +49,7 @@ async fn receive<T>(receiver: crossbeam_channel::Receiver<T>, delay: Duration) -
         match receiver.try_recv() {
             Err(crossbeam_channel::TryRecvError::Disconnected) => return Ok((None, receiver)),
             Err(crossbeam_channel::TryRecvError::Empty) => {
-                await!(tokio_timer::sleep(delay).compat()).map_err(Error::TokioTimer)?
+                tokio_timer::sleep(delay).compat().await.map_err(Error::TokioTimer)?
             }
             Ok(v) => return Ok( (Some(v), receiver) ),
         }

@@ -7,7 +7,7 @@ edition = "2018"
 # - Update CHANGELOG.md.
 # - Update doc URL.
 # - Create "v0.1.x" git tag.
-version = "0.3.0-alpha.1"
+version = "0.3.0-alpha.2"
 license = "MIT"
 readme = "README.md"
 description = """
@@ -15,7 +15,7 @@ Async/Stream Extensions for crossbeam-channel
 """
 authors = ["Danny Browning <bdbrowning2@gmail.com>"]
 categories = ["asynchronous", "network-programming"]
-documentation = "https://docs.rs/channel-async/0.3.0-alpha.1/channel_async/"
+documentation = "https://docs.rs/channel-async/"
 repository = "https://github.com/dbcfd/channel-async"
 
 [dependencies]
@@ -25,9 +25,9 @@ failure_derive = "0.1"
 tokio-timer = "0.2"
 
 [dependencies.futures]
-version = "0.3.0-alpha.14"
+version = "0.3.0-alpha.16"
 package = "futures-preview"
-features = ["compat"]
+features = ["async-await", "compat", "nightly"]
 
 [dev-dependencies]
 criterion = "0.2"
