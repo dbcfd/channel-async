@@ -1,4 +1,4 @@
-#![feature(futures_api, async_await, await_macro)]
+#![feature(async_await)]
 use criterion::{criterion_group, criterion_main, Criterion};
 use channel_async;
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
@@ -15,7 +15,7 @@ fn bench_unbounded(c: &mut Criterion) {
 
                 let send_fut = async move {
                     for i in 0..100 {
-                        await!(tx.send(i)).expect("Failed to send");
+                        tx.send(i).await.expect("Failed to send");
                     }
                 };
 
@@ -24,7 +24,7 @@ fn bench_unbounded(c: &mut Criterion) {
                         agg.push(x);
                         futures::future::ready(Ok(agg))
                     });
-                    await!(f)
+                    f.await
                 };
 
                 rt.spawn(send_fut.unit_error().boxed().compat());
@@ -53,7 +53,7 @@ fn bench_unbounded(c: &mut Criterion) {
 
                 let send_fut = async move {
                     for i in 0..100 {
-                        await!(tx.send(i)).expect("Failed to send");
+                        tx.send(i).await.expect("Failed to send");
                     }
                 };
 
@@ -62,7 +62,7 @@ fn bench_unbounded(c: &mut Criterion) {
                         agg.push(x);
                         futures::future::ready(Ok(agg))
                     });
-                    await!(f)
+                    f.await
                 };
 
                 rt.spawn(send_fut.unit_error().boxed().compat());
@@ -85,14 +85,10 @@ fn bench_unbounded(c: &mut Criterion) {
 criterion_group!(benches, bench_unbounded);
 
 //
-// Benchmark: cargo bench -- --verbose
-// aggregation_filter_map/4sics
-// time:   [448.23 ms 448.41 ms 448.23 ms]
-// slope  [448.23 ms 448.23 ms] R^2            [0.9657065 0.9657065]
-// mean   [451.14 ms 451.14 ms] std. dev.      [19.384 ms 19.384 ms]
-// median [449.64 ms 449.64 ms] med. abs. dev. [21.228 ms 21.228 ms]
-// aggregation_push/4sics  time:   [446.97 ms 441.84 ms 446.97 ms]
-// slope  [446.97 ms 446.97 ms] R^2            [0.9566896 0.9566896]
-// mean   [436.28 ms 436.28 ms] std. dev.      [8.5860 ms 8.5860 ms]
-// median [434.86 ms 434.86 ms] med. abs. dev. [8.0647 ms 8.0647 ms]
+// Benchmark: cargo bench --verbose
+// Benchmarking channel/10: AnalyzingCriterion.rs
+// channel/10              time:   [1.0201 ms 925.34 us 1.0201 ms]
+//
+// Benchmarking channel/100: AnalyzingCriterion.rs
+// channel/100             time:   [6.7099 ms 7.1574 ms 6.7099 ms]
 criterion_main!(benches);

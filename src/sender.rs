@@ -24,7 +24,7 @@ impl<T> Sender<T> {
                     return Err( (v, Error::Disconnected) )
                 },
                 Err(crossbeam_channel::TrySendError::Full(v)) => {
-                    if let Err(e) = await!(tokio_timer::sleep(self.delay).compat()) {
+                    if let Err(e) = tokio_timer::sleep(self.delay).compat().await {
                         return Err( (v, Error::TokioTimer(e)) );
                     }
                     msg = v;
