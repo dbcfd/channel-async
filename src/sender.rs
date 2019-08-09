@@ -21,15 +21,15 @@ impl<T> Sender<T> {
         loop {
             match self.inner.try_send(msg) {
                 Err(crossbeam_channel::TrySendError::Disconnected(v)) => {
-                    return Err( (v, Error::Disconnected) )
-                },
+                    return Err((v, Error::Disconnected))
+                }
                 Err(crossbeam_channel::TrySendError::Full(v)) => {
                     if let Err(e) = tokio_timer::sleep(self.delay).compat().await {
-                        return Err( (v, Error::TokioTimer(e)) );
+                        return Err((v, Error::TokioTimer(e)));
                     }
                     msg = v;
                 }
-                Ok(_) => return Ok( () ),
+                Ok(_) => return Ok(()),
             }
         }
     }
@@ -37,7 +37,9 @@ impl<T> Sender<T> {
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-    pub fn is_full(&self) -> bool { self.inner.is_full() }
+    pub fn is_full(&self) -> bool {
+        self.inner.is_full()
+    }
     pub fn len(&self) -> usize {
         self.inner.len()
     }

@@ -20,6 +20,7 @@ matrix:
   - env: TARGET=i686-unknown-linux-gnu
 
 script:
+  - cargo fmt --all -- --check
   - cargo test
   - cargo doc --no-deps
 

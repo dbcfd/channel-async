@@ -7,7 +7,8 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-type Outstanding<T> = Pin<Box<Future<Output=Result<(Option<T>, crossbeam_channel::Receiver<T>), Error>> + Send>>;
+type Outstanding<T> =
+    Pin<Box<Future<Output = Result<(Option<T>, crossbeam_channel::Receiver<T>), Error>> + Send>>;
 
 enum ReceiveState<T> {
     None,
@@ -38,20 +39,22 @@ impl<T> Receiver<T> {
     }
 
     fn inner<'a>(self: Pin<&'a mut Self>) -> &'a mut ReceiveState<T> {
-        unsafe {
-            &mut Pin::get_unchecked_mut(self).inner
-        }
+        unsafe { &mut Pin::get_unchecked_mut(self).inner }
     }
 }
 
-async fn receive<T>(receiver: crossbeam_channel::Receiver<T>, delay: Duration) -> Result<(Option<T>, crossbeam_channel::Receiver<T>), Error> {
+async fn receive<T>(
+    receiver: crossbeam_channel::Receiver<T>,
+    delay: Duration,
+) -> Result<(Option<T>, crossbeam_channel::Receiver<T>), Error> {
     loop {
         match receiver.try_recv() {
             Err(crossbeam_channel::TryRecvError::Disconnected) => return Ok((None, receiver)),
-            Err(crossbeam_channel::TryRecvError::Empty) => {
-                tokio_timer::sleep(delay).compat().await.map_err(Error::TokioTimer)?
-            }
-            Ok(v) => return Ok( (Some(v), receiver) ),
+            Err(crossbeam_channel::TryRecvError::Empty) => tokio_timer::sleep(delay)
+                .compat()
+                .await
+                .map_err(Error::TokioTimer)?,
+            Ok(v) => return Ok((Some(v), receiver)),
         }
     }
 }
@@ -59,10 +62,7 @@ async fn receive<T>(receiver: crossbeam_channel::Receiver<T>, delay: Duration) -
 impl<T: Send + 'static> Stream for Receiver<T> {
     type Item = Result<T, Error>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        waker: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
             let inner = std::mem::replace(self.as_mut().inner(), ReceiveState::None);
             match inner {
@@ -72,21 +72,19 @@ impl<T: Send + 'static> Stream for Receiver<T> {
                     let fut = receive(r, delay);
                     *self.as_mut().inner() = ReceiveState::Pending(fut.boxed());
                 }
-                ReceiveState::Pending(mut f) => {
-                    match f.as_mut().poll(waker) {
-                        Poll::Pending => {
-                            *self.as_mut().inner() = ReceiveState::Pending(f);
-                            return Poll::Pending;
-                        }
-                        Poll::Ready(Err(e)) => {
-                            return Poll::Ready(Some(Err(e)));
-                        }
-                        Poll::Ready( Ok( (opt_v, r) ) ) => {
-                            *self.as_mut().inner() = ReceiveState::Ready(r);
-                            return Poll::Ready(opt_v.map(|v| Ok(v)));
-                        }
+                ReceiveState::Pending(mut f) => match f.as_mut().poll(waker) {
+                    Poll::Pending => {
+                        *self.as_mut().inner() = ReceiveState::Pending(f);
+                        return Poll::Pending;
                     }
-                }
+                    Poll::Ready(Err(e)) => {
+                        return Poll::Ready(Some(Err(e)));
+                    }
+                    Poll::Ready(Ok((opt_v, r))) => {
+                        *self.as_mut().inner() = ReceiveState::Ready(r);
+                        return Poll::Ready(opt_v.map(|v| Ok(v)));
+                    }
+                },
             }
         }
     }
