@@ -19,8 +19,11 @@ matrix:
   - env: TARGET=i686-unknown-freebsd
   - env: TARGET=i686-unknown-linux-gnu
 
+before_script:
+  - cargo +nightly install --force rustfmt-nightly
+
 script:
-  - cargo fmt --all -- --check
+  - cargo +nightly fmt --all -- --check
   - cargo test
   - cargo doc --no-deps
 
