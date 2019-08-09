@@ -7,8 +7,9 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-type Outstanding<T> =
-    Pin<Box<dyn Future<Output = Result<(Option<T>, crossbeam_channel::Receiver<T>), Error>> + Send>>;
+type Outstanding<T> = Pin<
+    Box<dyn Future<Output = Result<(Option<T>, crossbeam_channel::Receiver<T>), Error>> + Send>,
+>;
 
 enum ReceiveState<T> {
     None,
