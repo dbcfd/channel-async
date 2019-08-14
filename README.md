@@ -9,8 +9,8 @@ Async/stream extensions to [crossbeam-channel](https://github.com/crossbeam-rs/c
 
 [Documentation](https://docs.rs/crossbeam-async/0.3.0-alpha.1/)
 
-[travis-badge]: https://img.shields.io/travis/dbcfd/channel-async/master.svg?style=flat-square
-[travis-url]: https://travis-ci.com/dbcfd/channel-async.svg?branch=master
+[travis-badge]: https://travis-ci.com/dbcfd/channel-async.svg?branch=master
+[travis-url]: https://travis-ci.com/dbcfd/channel-async
 [crates-badge]: https://img.shields.io/crates/v/channel-async.svg?style=flat-square
 [crates-url]: https://crates.io/crates/channel-async
 [docs-badge]: https://img.shields.io/badge/docs.rs-latest-blue.svg?style=flat-square
