@@ -1,4 +1,4 @@
-# tls-async
+# channel-async
 
 [![build status][travis-badge]][travis-url]
 [![crates.io version][crates-badge]][crates-url]
