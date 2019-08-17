@@ -1,15 +1,13 @@
 use crate::errors::Error;
 
-use futures::compat::Future01CompatExt;
 use futures::{FutureExt, Stream};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-type Outstanding<T> = Pin<
-    Box<dyn Future<Output = Result<(Option<T>, crossbeam_channel::Receiver<T>), Error>> + Send>,
->;
+type Outstanding<T> =
+    Pin<Box<dyn Future<Output = (Option<T>, crossbeam_channel::Receiver<T>)> + Send>>;
 
 enum ReceiveState<T> {
     None,
@@ -47,21 +45,18 @@ impl<T> Receiver<T> {
 async fn receive<T>(
     receiver: crossbeam_channel::Receiver<T>,
     delay: Duration,
-) -> Result<(Option<T>, crossbeam_channel::Receiver<T>), Error> {
+) -> (Option<T>, crossbeam_channel::Receiver<T>) {
     loop {
         match receiver.try_recv() {
-            Err(crossbeam_channel::TryRecvError::Disconnected) => return Ok((None, receiver)),
-            Err(crossbeam_channel::TryRecvError::Empty) => tokio_timer::sleep(delay)
-                .compat()
-                .await
-                .map_err(Error::TokioTimer)?,
-            Ok(v) => return Ok((Some(v), receiver)),
+            Err(crossbeam_channel::TryRecvError::Disconnected) => return (None, receiver),
+            Err(crossbeam_channel::TryRecvError::Empty) => tokio_timer::sleep(delay).await,
+            Ok(v) => return (Some(v), receiver),
         }
     }
 }
 
 impl<T: Send + 'static> Stream for Receiver<T> {
-    type Item = Result<T, Error>;
+    type Item = T;
 
     fn poll_next(mut self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
@@ -78,12 +73,9 @@ impl<T: Send + 'static> Stream for Receiver<T> {
                         *self.as_mut().inner() = ReceiveState::Pending(f);
                         return Poll::Pending;
                     }
-                    Poll::Ready(Err(e)) => {
-                        return Poll::Ready(Some(Err(e)));
-                    }
-                    Poll::Ready(Ok((opt_v, r))) => {
+                    Poll::Ready((opt_v, r)) => {
                         *self.as_mut().inner() = ReceiveState::Ready(r);
-                        return Poll::Ready(opt_v.map(|v| Ok(v)));
+                        return Poll::Ready(opt_v);
                     }
                 },
             }

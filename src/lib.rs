@@ -25,11 +25,11 @@ pub fn bounded<T>(delay: Duration, cap: usize) -> (Sender<T>, Receiver<T>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::{FutureExt, TryFutureExt, TryStreamExt};
+    use futures::StreamExt;
 
     #[test]
     fn send_receive() {
-        let mut rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
 
         let (tx, rx) = unbounded(Duration::from_millis(100));
 
@@ -40,18 +40,13 @@ mod tests {
         };
 
         let recv_fut = async move {
-            let f = rx.try_fold(vec![], |mut agg, x| {
-                agg.push(x);
-                futures::future::ready(Ok(agg))
-            });
-            f.await
+            let f: Vec<_> = rx.collect().await;
+            f
         };
 
-        rt.spawn(send_fut.unit_error().boxed().compat());
+        rt.spawn(send_fut);
 
-        let recv = rt
-            .block_on(recv_fut.boxed().compat())
-            .expect("Failed to receive");
+        let recv = rt.block_on(recv_fut);
 
         assert_eq!(recv.len(), 100);
     }

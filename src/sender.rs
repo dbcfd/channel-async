@@ -1,6 +1,5 @@
 use crate::errors::Error;
 
-use futures::compat::Future01CompatExt;
 use std::time::Duration;
 
 pub struct Sender<T> {
@@ -24,9 +23,7 @@ impl<T> Sender<T> {
                     return Err((v, Error::Disconnected))
                 }
                 Err(crossbeam_channel::TrySendError::Full(v)) => {
-                    if let Err(e) = tokio_timer::sleep(self.delay).compat().await {
-                        return Err((v, Error::TokioTimer(e)));
-                    }
+                    tokio_timer::sleep(self.delay).await;
                     msg = v;
                 }
                 Ok(_) => return Ok(()),

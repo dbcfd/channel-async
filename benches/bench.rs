@@ -1,12 +1,12 @@
 #![feature(async_await)]
 use channel_async;
 use criterion::{criterion_group, criterion_main, Criterion};
-use futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::StreamExt;
 use std::time::Duration;
 
 fn create_benchmark(name: &str, sz: usize) -> criterion::Benchmark {
     criterion::Benchmark::new(name, move |b| {
-        let mut rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
 
         b.iter(|| {
             let (tx, rx) = channel_async::unbounded(Duration::from_millis(10));
@@ -18,18 +18,13 @@ fn create_benchmark(name: &str, sz: usize) -> criterion::Benchmark {
             };
 
             let recv_fut = async move {
-                let f = rx.try_fold(vec![], |mut agg, x| {
-                    agg.push(x);
-                    futures::future::ready(Ok(agg))
-                });
-                f.await
+                let f: Vec<_> = rx.collect().await;
+                f
             };
 
-            rt.spawn(send_fut.unit_error().boxed().compat());
+            rt.spawn(send_fut);
 
-            let recv = rt
-                .block_on(recv_fut.boxed().compat())
-                .expect("Failed to receive");
+            let recv = rt.block_on(recv_fut);
 
             assert_eq!(recv.len(), sz);
         });
@@ -38,7 +33,7 @@ fn create_benchmark(name: &str, sz: usize) -> criterion::Benchmark {
 
 fn create_multiple_benchmark(name: &str, sz: usize) -> criterion::Benchmark {
     criterion::Benchmark::new(name, move |b| {
-        let mut rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
 
         b.iter(|| {
             let (tx1, rx1) = channel_async::unbounded(Duration::from_millis(10));
@@ -50,7 +45,7 @@ fn create_multiple_benchmark(name: &str, sz: usize) -> criterion::Benchmark {
                 }
             };
 
-            rt.spawn(send_fut1.unit_error().boxed().compat());
+            rt.spawn(send_fut1);
 
             let send_fut2 = async move {
                 for i in 0..sz {
@@ -58,7 +53,7 @@ fn create_multiple_benchmark(name: &str, sz: usize) -> criterion::Benchmark {
                 }
             };
 
-            rt.spawn(send_fut2.unit_error().boxed().compat());
+            rt.spawn(send_fut2);
 
             let (tx, rx) = channel_async::unbounded(Duration::from_millis(10));
 
@@ -99,19 +94,14 @@ fn create_multiple_benchmark(name: &str, sz: usize) -> criterion::Benchmark {
                 }
             };
 
-            rt.spawn(forward_fut.unit_error().boxed().compat());
+            rt.spawn(forward_fut);
 
             let recv_fut = async move {
-                let f = rx.try_fold(vec![], |mut agg, x| {
-                    agg.push(x);
-                    futures::future::ready(Ok(agg))
-                });
-                f.await
+                let f: Vec<_> = rx.collect().await;
+                f
             };
 
-            let recv = rt
-                .block_on(recv_fut.boxed().compat())
-                .expect("Failed to receive");
+            let recv = rt.block_on(recv_fut);
 
             assert_eq!(recv.len(), sz * 2);
         });
