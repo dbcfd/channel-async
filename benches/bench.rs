@@ -1,4 +1,3 @@
-#![feature(async_await)]
 use channel_async;
 use criterion::{criterion_group, criterion_main, Criterion};
 use futures::StreamExt;

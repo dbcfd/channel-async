@@ -7,7 +7,7 @@
 
 Async/stream extensions to [crossbeam-channel](https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-channel) on top of [Futures 0.3](https://github.com/rust-lang-nursery/futures-rs) Stream. It is primarily intended for usage with [Tokio](https://github.com/tokio-rs/tokio).
 
-[Documentation](https://docs.rs/crossbeam-async/0.3.0-alpha.1/)
+[Documentation](https://docs.rs/crossbeam-async/latest/)
 
 [travis-badge]: https://travis-ci.com/dbcfd/channel-async.svg?branch=master
 [travis-url]: https://travis-ci.com/dbcfd/channel-async
@@ -24,7 +24,7 @@ First, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-channel-async = "0.3.0-alpha.1"
+channel-async = "0.3.0-alpha.4"
 ```
 
 Next, add this to your crate:
