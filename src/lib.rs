@@ -1,6 +1,31 @@
 //! #channel-async
 //!
 //! Async/stream extensions for crossbeam-channel
+//!
+//! ```no-run
+//! use futures::{FutureExt, TryFutureExt};
+//!
+//!#[tokio::main]
+//!async fn run_channels() {
+//!    let (tx, rx) = channel_async::unbounded(Duration::from_millis(100));
+//!
+//!    let send_fut = async move {
+//!        for i in 1..100 {
+//!            tx.send(i).await.expect("Failed to send");
+//!        }
+//!    };
+//!
+//!    tokio::spawn(send_fut);
+//!
+//!    let recv_fut = async move {
+//!      let rcvd: Vec<_> = rx.collect().await;
+//!      rcvd
+//!    };
+//!
+//!    let rcvd = recv_fut.await;
+//!
+//!    println!("Received {} messages", rcvd.len());
+//!}
 mod errors;
 mod receiver;
 mod sender;
@@ -48,14 +73,14 @@ mod tests {
         assert_eq!(recv.len(), 100);
     }
 
-    #[tokio::test()]
+    #[tokio::test(single_thread)]
     async fn send_receive_slow_sender_single_thread() {
-        let (tx, rx) = unbounded(Duration::from_millis(100));
+        let (tx, rx) = unbounded(Duration::from_millis(10));
 
         let send_fut = async move {
             for i in 0..100usize {
                 if i % 10 == 0 {
-                    tokio_timer::sleep(Duration::from_millis(500)).await;
+                    tokio_timer::sleep(Duration::from_millis(100)).await;
                 }
                 tx.send(i).await.expect("Failed to send");
             }
@@ -73,9 +98,9 @@ mod tests {
         assert_eq!(recv.len(), 100);
     }
 
-    #[tokio::test(single_thread)]
-    async fn send_receive_slow_receiver() {
-        let (tx, rx) = unbounded(Duration::from_secs(1));
+    #[tokio::test(multi_thread)]
+    async fn send_receive_slow_sender_multi_thread() {
+        let (tx, rx) = unbounded(Duration::from_secs(10));
 
         let send_fut = async move {
             for i in 0..100usize {
