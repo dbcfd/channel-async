@@ -1,56 +1,36 @@
-use crate::errors::Error;
-
-use futures::{FutureExt, Stream};
+use futures::Stream;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
-
-type Outstanding<T> =
-    Pin<Box<dyn Future<Output = (Option<T>, crossbeam_channel::Receiver<T>)> + Send>>;
-
-enum ReceiveState<T> {
-    None,
-    Ready(crossbeam_channel::Receiver<T>),
-    Pending(Outstanding<T>),
-}
+use tokio_timer::Delay;
 
 pub struct Receiver<T> {
-    inner: ReceiveState<T>,
+    inner: crossbeam_channel::Receiver<T>,
     delay: Duration,
+    pending: Option<Delay>,
 }
 
 impl<T> Receiver<T> {
     pub fn new(r: crossbeam_channel::Receiver<T>, delay: Duration) -> Receiver<T> {
         Receiver {
-            inner: ReceiveState::Ready(r),
+            inner: r,
             delay: delay,
+            pending: None,
         }
     }
 
-    #[allow(dead_code)]
-    pub fn try_clone(&self) -> Result<Receiver<T>, Error> {
-        if let ReceiveState::Ready(ref r) = self.inner {
-            Ok(Receiver::new(r.clone(), self.delay))
-        } else {
-            Err(Error::Clone)
-        }
-    }
-
-    fn inner<'a>(self: Pin<&'a mut Self>) -> &'a mut ReceiveState<T> {
-        unsafe { &mut Pin::get_unchecked_mut(self).inner }
+    fn pending(self: Pin<&mut Self>) -> Pin<&mut Option<Delay>> {
+        unsafe { Pin::map_unchecked_mut(self, |x| &mut x.pending) }
     }
 }
 
-async fn receive<T>(
-    receiver: crossbeam_channel::Receiver<T>,
-    delay: Duration,
-) -> (Option<T>, crossbeam_channel::Receiver<T>) {
-    loop {
-        match receiver.try_recv() {
-            Err(crossbeam_channel::TryRecvError::Disconnected) => return (None, receiver),
-            Err(crossbeam_channel::TryRecvError::Empty) => tokio_timer::sleep(delay).await,
-            Ok(v) => return (Some(v), receiver),
+impl<T> Clone for Receiver<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            delay: self.delay,
+            pending: None,
         }
     }
 }
@@ -58,26 +38,20 @@ async fn receive<T>(
 impl<T: Send + 'static> Stream for Receiver<T> {
     type Item = T;
 
-    fn poll_next(mut self: Pin<&mut Self>, waker: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
-            let inner = std::mem::replace(self.as_mut().inner(), ReceiveState::None);
-            match inner {
-                ReceiveState::None => panic!("Cannot call poll_next twice"),
-                ReceiveState::Ready(r) => {
-                    let delay = self.delay;
-                    let fut = receive(r, delay);
-                    *self.as_mut().inner() = ReceiveState::Pending(fut.boxed());
-                }
-                ReceiveState::Pending(mut f) => match f.as_mut().poll(waker) {
-                    Poll::Pending => {
-                        *self.as_mut().inner() = ReceiveState::Pending(f);
-                        return Poll::Pending;
+            match self.as_mut().pending().as_pin_mut() {
+                None => match self.inner.try_recv() {
+                    Err(crossbeam_channel::TryRecvError::Disconnected) => return Poll::Ready(None),
+                    Err(crossbeam_channel::TryRecvError::Empty) => {
+                        *self.as_mut().pending().get_mut() = Some(tokio_timer::sleep(self.delay));
                     }
-                    Poll::Ready((opt_v, r)) => {
-                        *self.as_mut().inner() = ReceiveState::Ready(r);
-                        return Poll::Ready(opt_v);
-                    }
+                    Ok(v) => return Poll::Ready(Some(v)),
                 },
+                Some(pending) => {
+                    futures::ready!(pending.poll(cx));
+                    *self.as_mut().pending().get_mut() = None;
+                }
             }
         }
     }
@@ -85,12 +59,19 @@ impl<T: Send + 'static> Stream for Receiver<T> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::time::Duration;
 
+    fn assert_send<T: Send>() {}
+    fn assert_sync<T: Sync>() {}
+
     #[test]
-    fn clone() {
+    fn assert_contracts() {
         let (_, r) = crate::unbounded::<i32>(Duration::from_millis(100));
 
-        r.try_clone().expect("Could not clone a fresh receiver");
+        let _r2 = r.clone();
+
+        assert_send::<Receiver<i32>>();
+        assert_sync::<Receiver<i32>>();
     }
 }

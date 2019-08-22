@@ -7,7 +7,7 @@
 
 Async/stream extensions to [crossbeam-channel](https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-channel) on top of [Futures 0.3](https://github.com/rust-lang-nursery/futures-rs) Stream. It is primarily intended for usage with [Tokio](https://github.com/tokio-rs/tokio).
 
-[Documentation](https://docs.rs/crossbeam-async/latest/)
+[Documentation](https://docs.rs/channel-async/latest/)
 
 [travis-badge]: https://travis-ci.com/dbcfd/channel-async.svg?branch=master
 [travis-url]: https://travis-ci.com/dbcfd/channel-async
@@ -24,7 +24,7 @@ First, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-channel-async = "0.3.0-alpha.4"
+channel-async = "0.3.0-alpha.5"
 ```
 
 Next, add this to your crate:
@@ -32,31 +32,27 @@ Next, add this to your crate:
 ```rust
 use futures::{FutureExt, TryFutureExt};
 
-let mut rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+#[tokio::main]
+async fn run_channels() {
+    let (tx, rx) = channel_async::unbounded(Duration::from_millis(100));
 
-let (tx, rx) = channel_async::unbounded(Duration::from_millis(100));
+    let send_fut = async move {
+        for i in 1..100 {
+            tx.send(i).await.expect("Failed to send");
+        }
+    };
+    
+    tokio::spawn(send_fut);
 
-let send_fut = async move {
-    for i in 1..100 {
-        await!(tx.send(i))?;
-    }
-    Ok(())
-};
-
-rt.spawn(send_fut.map_err(|e| {
-    error!("Failed to send: {:?}", e);
-    ()
-}).boxed().compat());
-
-let recv_fut = rx
-    .try_fold(vec![], |mut agg, v| {
-        agg.push(v);
-        futures::future::ready(Ok(agg))
-    })
-    .boxed()
-    .compat();
-
-let rcvd = rt.block_on(recv_fut);
+    let recv_fut = async move {
+      let rcvd: Vec<_> = rx.collect().await;
+      rcvd
+    };
+    
+    let rcvd = recv_fut.await;
+    
+    println!("Received {} messages", rcvd.len());
+}
 ```
 
 ## License
