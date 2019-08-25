@@ -19,38 +19,28 @@ impl<T> Receiver<T> {
             pending: None,
         }
     }
-
-    fn pending(self: Pin<&mut Self>) -> Pin<&mut Option<Delay>> {
-        unsafe { Pin::map_unchecked_mut(self, |x| &mut x.pending) }
-    }
-}
-
-impl<T> Clone for Receiver<T> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            delay: self.delay,
-            pending: None,
-        }
-    }
 }
 
 impl<T: Send + 'static> Stream for Receiver<T> {
     type Item = T;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let Self { inner, delay, pending } = unsafe { self.get_unchecked_mut() };
         loop {
-            match self.as_mut().pending().as_pin_mut() {
-                None => match self.inner.try_recv() {
-                    Err(crossbeam_channel::TryRecvError::Disconnected) => return Poll::Ready(None),
-                    Err(crossbeam_channel::TryRecvError::Empty) => {
-                        *self.as_mut().pending().get_mut() = Some(tokio_timer::sleep(self.delay));
+            match pending {
+                None => {
+                    match inner.try_recv() {
+                        Err(crossbeam_channel::TryRecvError::Disconnected) => return Poll::Ready(None),
+                        Err(crossbeam_channel::TryRecvError::Empty) => {
+                            *pending = Some(tokio_timer::sleep(*delay));
+                        }
+                        Ok(v) => return Poll::Ready(Some(v)),
                     }
-                    Ok(v) => return Poll::Ready(Some(v)),
                 },
-                Some(pending) => {
-                    futures::ready!(pending.poll(cx));
-                    *self.as_mut().pending().get_mut() = None;
+                Some(pending_value) => {
+                    let pin_pending = unsafe { Pin::new_unchecked(pending_value) };
+                    futures::ready!(pin_pending.poll(cx));
+                    *pending = None;
                 }
             }
         }
@@ -67,9 +57,7 @@ mod tests {
 
     #[test]
     fn assert_contracts() {
-        let (_, r) = crate::unbounded::<i32>(Duration::from_millis(100));
-
-        let _r2 = r.clone();
+        let (_, _r) = crate::unbounded::<i32>(Duration::from_millis(100));
 
         assert_send::<Receiver<i32>>();
         assert_sync::<Receiver<i32>>();
