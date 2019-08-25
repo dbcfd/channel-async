@@ -25,17 +25,19 @@ impl<T: Send + 'static> Stream for Receiver<T> {
     type Item = T;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let Self { inner, delay, pending } = unsafe { self.get_unchecked_mut() };
+        let Self {
+            inner,
+            delay,
+            pending,
+        } = unsafe { self.get_unchecked_mut() };
         loop {
             match pending {
-                None => {
-                    match inner.try_recv() {
-                        Err(crossbeam_channel::TryRecvError::Disconnected) => return Poll::Ready(None),
-                        Err(crossbeam_channel::TryRecvError::Empty) => {
-                            *pending = Some(tokio_timer::sleep(*delay));
-                        }
-                        Ok(v) => return Poll::Ready(Some(v)),
+                None => match inner.try_recv() {
+                    Err(crossbeam_channel::TryRecvError::Disconnected) => return Poll::Ready(None),
+                    Err(crossbeam_channel::TryRecvError::Empty) => {
+                        *pending = Some(tokio_timer::sleep(*delay));
                     }
+                    Ok(v) => return Poll::Ready(Some(v)),
                 },
                 Some(pending_value) => {
                     let pin_pending = unsafe { Pin::new_unchecked(pending_value) };
