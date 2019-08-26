@@ -19,6 +19,11 @@ impl<T> Receiver<T> {
             pending: None,
         }
     }
+
+    pub fn into_inner(self) -> crossbeam_channel::Receiver<T> {
+        self.inner
+    }
+
 }
 
 impl<T: Send + 'static> Stream for Receiver<T> {

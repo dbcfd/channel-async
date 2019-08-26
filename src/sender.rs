@@ -40,6 +40,10 @@ impl<T> Sender<T> {
     pub fn len(&self) -> usize {
         self.inner.len()
     }
+
+    pub fn into_inner(self) -> crossbeam_channel::Sender<T> {
+        self.inner
+    }
 }
 
 impl<T> Clone for Sender<T> {
