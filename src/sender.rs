@@ -41,8 +41,8 @@ impl<T> Sender<T> {
         self.inner.len()
     }
 
-    pub fn into_inner(&self) -> &crossbeam_channel::Sender<T> {
-        &self.inner
+    pub fn into_inner(self) -> crossbeam_channel::Sender<T> {
+        self.inner
     }
 }
 
