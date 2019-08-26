@@ -20,8 +20,8 @@ impl<T> Receiver<T> {
         }
     }
 
-    pub fn clone_inner(&self) -> crossbeam_channel::Receiver<T> {
-        self.inner.clone()
+    pub fn into_inner(&self) -> &crossbeam_channel::Receiver<T> {
+        &self.inner
     }
 
 }
