@@ -19,6 +19,11 @@ impl<T> Receiver<T> {
             pending: None,
         }
     }
+
+    pub fn clone_inner(&self) -> crossbeam_channel::Receiver<T> {
+        self.inner.clone()
+    }
+
 }
 
 impl<T: Send + 'static> Stream for Receiver<T> {
