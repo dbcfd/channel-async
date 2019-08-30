@@ -24,7 +24,7 @@ First, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-channel-async = "0.3.0-alpha.7"
+channel-async = "0.3.0-alpha.8"
 ```
 
 Next, add this to your crate:
