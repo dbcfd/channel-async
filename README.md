@@ -5,6 +5,10 @@
 [![docs.rs docs][docs-badge]][docs-url]
 [![MIT licensed][mit-badge]][mit-url]
 
+* This crate is no longer maintained *
+
+Due to interactions between crossbeam and tokio, it is recommended that you use the channels in [async-std](https://github.com/async-rs/async-std)
+
 Async/stream extensions to [crossbeam-channel](https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-channel) on top of [Futures 0.3](https://github.com/rust-lang-nursery/futures-rs) Stream. It is primarily intended for usage with [Tokio](https://github.com/tokio-rs/tokio).
 
 [Documentation](https://docs.rs/channel-async/latest/)
